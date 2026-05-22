@@ -11,6 +11,7 @@ from datetime import datetime
 import logging
 from threading import Thread
 from flask import Flask
+from Orders import oco
 
 # ==========================================
 # 2. إعدادات خادم الويب (Keep-Alive) لإبقاء السيرفر مستيقظاً
@@ -118,10 +119,12 @@ class TelegramBot:
 #  Message Templates
 # ══════════════════════════════════════════════════════════════
 def msg_open_trade(symbol, entry, sl, tp, equity, risk_usd):
+    es=oco(symbol,tp,sl)
     risk_pct = abs(entry - sl) / entry * 100
     return (
         f"🟢 <b>صفقة جديدة مفتوحة</b>\n"
-        f"{'─'*28}\n"
+        f"{'─'*20}\n"
+        f"es:<b>{es}</b>\n"
         f"📌 العملة:      <b>{symbol}</b>\n"
         f"Entery: <code>{entry:.4f}</code>\n"
         f"🛑SL: <code>{sl:.4f}</code>  (-{risk_pct:.2f}%)\n"
