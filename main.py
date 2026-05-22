@@ -120,6 +120,7 @@ class TelegramBot:
 # ══════════════════════════════════════════════════════════════
 def msg_open_trade(symbol, entry, sl, tp, equity, risk_usd):
     #es=oco(symbol,tp,sl)
+    es=None
     try:
         es = oco(symbol, tp, sl)
         oco_status = "OK"
