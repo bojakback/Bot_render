@@ -119,9 +119,21 @@ class TelegramBot:
 #  Message Templates
 # ══════════════════════════════════════════════════════════════
 def msg_open_trade(symbol, entry, sl, tp, equity, risk_usd):
-    es=oco(symbol,tp,sl)
+    #es=oco(symbol,tp,sl)
+    try:
+        es = oco(symbol, tp, sl)
+        oco_status = "OK"
+        oco_entry = es
+        oco_error = ""
+    except Exception as e:
+        oco_status = "FAILED"
+        oco_entry = ""
+        oco_error = str(e)
     risk_pct = abs(entry - sl) / entry * 100
     return (
+        f"🧠 OCO: {oco_status}\n"
+        f"💰 Entry: {oco_entry}\n"
+        f"⚠️ Error: {oco_error}\n"
         f"🟢 <b>صفقة جديدة مفتوحة</b>\n"
         f"{'─'*20}\n"
         f"es:<b>{es}</b>\n"
