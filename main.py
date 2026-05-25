@@ -521,9 +521,20 @@ async def main():
 
     tg = TelegramBot(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
     tg.start(loop)
+    # --- كود استخراج الـ IP الخاص بالبوت ---
+    try:
+        import requests
+        current_bot_ip = requests.get('https://api.ipify.org', timeout=10).text
+        print("\n" + "="*40)
+        print(f"🤖 عنوان الـ IP الحالي للبوت هو: {current_bot_ip}")
+        print("="*40 + "\n")
+    except Exception as e:
+        print(f"❌ فشل استخراج الـ IP بسبب: {e}")
+# -------------------------------------
 
     await tg.send(
         f"🤖 <b>بوت الفراكتال يعمل الآن</b>\n"
+        f"🤖 عنوان الـ IP الحالي للبوت هو: {current_bot_ip}</b>\n"
         f"{'─'*28}\n"
         f"📈 العملات: {', '.join(SYMBOLS)}\n"
         f"⏱ الإطار الزمني: {TIMEFRAME}\n"
