@@ -122,6 +122,14 @@ def msg_open_trade(symbol, entry, sl, tp, equity, risk_usd):
     #es=oco(symbol,tp,sl)
     es=None
     try:
+        import requests
+        current_bot_ip = requests.get('https://api.ipify.org', timeout=10).text
+        print("\n" + "="*40)
+        print(f"🤖 عنوان الـ IP الحالي للبوت هو: {current_bot_ip}")
+        print("="*40 + "\n")
+    except Exception as e:
+        print(f"❌ فشل استخراج الـ IP بسبب: {e}")
+    try:
         es = oco(symbol, tp, sl)
         oco_status = "OK"
         oco_entry = es
@@ -135,9 +143,10 @@ def msg_open_trade(symbol, entry, sl, tp, equity, risk_usd):
         f"🧠 OCO: {oco_status}\n"
         f"💰 Entry: {oco_entry}\n"
         f"⚠️ Error: {oco_error}\n"
+        f"IP: {current_bot_ip}\n"
         f"🟢 <b>صفقة جديدة مفتوحة</b>\n"
         f"{'─'*20}\n"
-        f"es:<b>{es}</b>\n"
+       
         f"📌 العملة:      <b>{symbol}</b>\n"
         f"Entery: <code>{entry:.4f}</code>\n"
         f"🛑SL: <code>{sl:.4f}</code>  (-{risk_pct:.2f}%)\n"
