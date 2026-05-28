@@ -58,12 +58,12 @@ log = logging.getLogger(__name__)
 TELEGRAM_TOKEN   = "8920750196:AAEBROUxyPeByMgPOo2zj5XEObryoMzdQ5o"
 TELEGRAM_CHAT_ID = "8561627376"
 
-SYMBOLS = ['ZBTUSDT', 'ZAMAUSDT','WBETHUSDT', 'ETHUSDT', 'LAUSDT', 'BTCUSDT', 'MEMEUSDT', 'SOLVUSDT']
+SYMBOLS = ['ZBTUSDT', 'ZAMAUSDT', 'WBETHUSDT', 'ETHUSDT', 'LAUSDT', 'BTCUSDT', 'MEMEUSDT', 'SOLVUSDT']
 
 CAPITAL_PER_SYMBOL = 100.0   # رأس المال لكل عملة بالدولار
 TIMEFRAME          = "1h"    # الإطار الزمني
 COMMISSION         = 0.001   # 0.1% عمولة بينانس
-TP_FIXED_PCT       = 0.007   # TP ثابت 1.2% دائماً
+TP_FIXED_PCT       = 0.012   # TP ثابت 1.2% دائماً
 PERIOD             = 2       # فترة الفراكتال
 
 # فلاتر الاختراق الكاذب
@@ -76,7 +76,7 @@ RSI_OVERBOUGHT     = 72
 MAX_WICK_RATIO     = 0.6
 
 # عدد الشموع التاريخية عند البدء
-HISTORICAL_CANDLES = 720
+HISTORICAL_CANDLES = 220
 
 # ══════════════════════════════════════════════════════════════
 #  Telegram
