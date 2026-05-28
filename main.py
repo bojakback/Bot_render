@@ -1,4 +1,4 @@
-# ==========================================
+ش# ==========================================
 # 1. استدعاء المكتبات (شاملة مكتبات البوت والويب)
 # ==========================================
 import asyncio
@@ -417,7 +417,7 @@ class SymbolEngine:
                         return
 
                     tp_price     = c['close'] + risk * TP_RATIO
-                    self.entry_price = c['close']
+                    self.entry_price = c['close']* (1 + 0.012)
                     self.sl          = sl_price
                     self.tp          = tp_price
                     self.in_trade    = True
