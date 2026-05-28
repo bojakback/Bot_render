@@ -76,7 +76,7 @@ RSI_OVERBOUGHT     = 72
 MAX_WICK_RATIO     = 0.6
 
 # عدد الشموع التاريخية عند البدء
-HISTORICAL_CANDLES = 220
+HISTORICAL_CANDLES = 720
 
 # ══════════════════════════════════════════════════════════════
 #  Telegram
