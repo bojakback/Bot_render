@@ -63,7 +63,7 @@ SYMBOLS = ['ZBTUSDT', 'ZAMAUSDT', 'WBETHUSDT', 'ETHUSDT', 'LAUSDT', 'ACXUSDT', '
 CAPITAL_PER_SYMBOL = 100.0   # رأس المال لكل عملة بالدولار
 TIMEFRAME          = "1h"    # الإطار الزمني
 COMMISSION         = 0.001   # 0.1% عمولة بينانس
-TP_FIXED_PCT       = 0.012   # TP ثابت 1.2% دائماً
+TP_FIXED_PCT       = 0.007   # TP ثابت 1.2% دائماً
 PERIOD             = 2       # فترة الفراكتال
 
 # فلاتر الاختراق الكاذب
