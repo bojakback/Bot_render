@@ -58,13 +58,28 @@ log = logging.getLogger(__name__)
 TELEGRAM_TOKEN   = "8920750196:AAEBROUxyPeByMgPOo2zj5XEObryoMzdQ5o"
 TELEGRAM_CHAT_ID = "8561627376"
 
-SYMBOLS = ['ZBTUSDT', 'ZAMAUSDT', 'WBETHUSDT', 'ETHUSDT', 'LAUSDT', 'BTCUSDT', 'MEMEUSDT', 'SOLVUSDT']
+SYMBOLS = ['ZBTUSDT', 'ZAMAUSDT', 'WBETHUSDT', 'ETHUSDT', 'LAUSDT', 'ACXUSDT', 'BTCUSDT', 'MEMEUSDT', 'SOLVUSDT']
 
 CAPITAL_PER_SYMBOL = 100.0   # رأس المال لكل عملة بالدولار
 TIMEFRAME          = "1h"    # الإطار الزمني
 COMMISSION         = 0.001   # 0.1% عمولة بينانس
-TP_FIXED_PCT       = 0.012   # TP ثابت 1.2% دائماً
 PERIOD             = 2       # فترة الفراكتال
+
+# ──────────────────────────────────────────────────────────────
+#  🎯 إعدادات TP و SL
+#  ضع نسبة مئوية (مثال: 0.012 = 1.2%) أو اكتب None للاستخدام الافتراضي
+#
+#  TP_FIXED_PCT:
+#    - رقم  → TP ثابت بهذه النسبة من سعر الدخول
+#    - None → TP يُحسب من المسافة للـ SL (الطريقة القديمة: risk * TP_RATIO)
+#
+#  SL_FIXED_PCT:
+#    - رقم  → SL ثابت بهذه النسبة أسفل سعر الدخول
+#    - None → SL يُحسب من آخر فراكتال دعم (الطريقة القديمة)
+# ──────────────────────────────────────────────────────────────
+TP_FIXED_PCT  = 0.007   # مثال: 0.012 = 1.2% | None = فراكتال
+SL_FIXED_PCT  = 0.01#None    # مثال: 0.010 = 1.0% | None = فراكتال
+TP_RATIO      = 1.0     # يُستخدم فقط إذا كان TP_FIXED_PCT = None
 
 # فلاتر الاختراق الكاذب
 VOLUME_MULTIPLIER  = 1.5
@@ -137,8 +152,10 @@ def msg_open_trade(symbol, entry, sl, tp, equity, risk_usd):
         oco_status = "FAILED"
         oco_entry  = ""
         oco_error  = str(e)
-    risk_pct = abs(entry - sl) / entry * 100
-    tp_pct   = TP_FIXED_PCT * 100
+    sl_pct  = abs(entry - sl) / entry * 100
+    tp_pct  = abs(tp - entry) / entry * 100
+    sl_mode = f"ثابت {SL_FIXED_PCT*100:.1f}%" if SL_FIXED_PCT is not None else "فراكتال"
+    tp_mode = f"ثابت {TP_FIXED_PCT*100:.1f}%" if TP_FIXED_PCT is not None else f"فراكتال ×{TP_RATIO}"
     return (
         f"🧠 OCO: {oco_status}\n"
         f"💰 Entry: {oco_entry}\n"
@@ -148,8 +165,8 @@ def msg_open_trade(symbol, entry, sl, tp, equity, risk_usd):
         f"{'─'*20}\n"
         f"📌 العملة:      <b>{symbol}</b>\n"
         f"Entery: <code>{entry:.4f}</code>\n"
-        f"🛑SL: <code>{sl:.4f}</code>  (-{risk_pct:.2f}%)\n"
-        f"🎯TP:  <code>{tp:.4f}</code>  (+{tp_pct:.2f}%)\n"
+        f"🛑SL: <code>{sl:.4f}</code>  (-{sl_pct:.2f}%)  [{sl_mode}]\n"
+        f"🎯TP:  <code>{tp:.4f}</code>  (+{tp_pct:.2f}%)  [{tp_mode}]\n"
         f"💰 رأس المال:   <code>${equity:,.2f}</code>\n"
         f"⚠️ مخاطرة:     <code>${risk_usd:.2f}</code>\n"
         f"🕐 {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -244,7 +261,9 @@ def msg_historical_report(records):
         f"{'+'if total_pnl>=0 else ''}{total_pnl:.2f}$"
     )
     lines.append(f"{'─'*28}")
-    lines.append(f"🎯 TP الثابت: {TP_FIXED_PCT*100:.1f}%  |  رأس المال لكل عملة: ${CAPITAL_PER_SYMBOL:.0f}")
+    tp_label = f"ثابت {TP_FIXED_PCT*100:.1f}%" if TP_FIXED_PCT is not None else f"فراكتال ×{TP_RATIO}"
+    sl_label = f"ثابت {SL_FIXED_PCT*100:.1f}%" if SL_FIXED_PCT is not None else "فراكتال"
+    lines.append(f"🎯 TP: {tp_label}  |  🛑 SL: {sl_label}  |  رأس المال: ${CAPITAL_PER_SYMBOL:.0f}")
     return "\n".join(lines)
 
 # ══════════════════════════════════════════════════════════════
@@ -445,8 +464,20 @@ class SymbolEngine:
                         self.levels.remove_broken_resistances(c['close'])
                         return
 
-                    # TP ثابت 1.2% من سعر الدخول
-                    tp_price         = c['close'] * (1 + TP_FIXED_PCT)
+                    # ── حساب SL ──────────────────────────────────
+                    # SL_FIXED_PCT = رقم → ثابت | None → فراكتال (القيمة الافتراضية)
+                    if SL_FIXED_PCT is not None:
+                        sl_price = c['close'] * (1 - SL_FIXED_PCT)
+                    # إذا None تبقى sl_price = support['price'] كما هي
+
+                    # ── حساب TP ──────────────────────────────────
+                    # TP_FIXED_PCT = رقم → ثابت | None → فراكتال × TP_RATIO (الافتراضي)
+                    risk = c['close'] - sl_price
+                    if TP_FIXED_PCT is not None:
+                        tp_price = c['close'] * (1 + TP_FIXED_PCT)
+                    else:
+                        tp_price = c['close'] + risk * TP_RATIO
+
                     self.entry_price = c['close']
                     self.sl          = sl_price
                     self.tp          = tp_price
@@ -579,7 +610,8 @@ async def main():
         f"📈 العملات: {', '.join(SYMBOLS)}\n"
         f"⏱ الإطار الزمني: {TIMEFRAME}\n"
         f"💰 رأس المال لكل عملة: ${CAPITAL_PER_SYMBOL:,.0f}\n"
-        f"🎯 TP ثابت: {TP_FIXED_PCT*100:.1f}%\n"
+        f"🎯 TP: {'ثابت '+str(TP_FIXED_PCT*100)+'%' if TP_FIXED_PCT is not None else 'فراكتال ×'+str(TP_RATIO)}\n"
+        f"🛑 SL: {'ثابت '+str(SL_FIXED_PCT*100)+'%' if SL_FIXED_PCT is not None else 'فراكتال'}\n"
         f"🛡 فلاتر الاختراق الكاذب: مفعّلة\n"
         f"{'─'*28}\n"
         f"🕐 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
