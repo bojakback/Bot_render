@@ -1,4 +1,4 @@
-ش# ==========================================
+# ==========================================
 # 1. استدعاء المكتبات (شاملة مكتبات البوت والويب)
 # ==========================================
 import asyncio
@@ -32,7 +32,6 @@ def home():
     )
 
 def run_web_server():
-    # إخفاء رسائل Flask من السجلات حتى لا تزعج سجلات البوت
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
     app.run(host="0.0.0.0", port=8080)
@@ -43,7 +42,7 @@ def keep_alive():
 
 
 # ==========================================
-# 3. كود بوت التداول الخاص بك (كما هو بالضبط)
+# 3. كود بوت التداول
 # ==========================================
 
 logging.basicConfig(
@@ -56,16 +55,16 @@ log = logging.getLogger(__name__)
 # ══════════════════════════════════════════════════════════════
 #  ⚙️  إعدادات المستخدم – عدّل هنا فقط
 # ══════════════════════════════════════════════════════════════
-TELEGRAM_TOKEN  = "8920750196:AAEBROUxyPeByMgPOo2zj5XEObryoMzdQ5o"
+TELEGRAM_TOKEN   = "8920750196:AAEBROUxyPeByMgPOo2zj5XEObryoMzdQ5o"
 TELEGRAM_CHAT_ID = "8561627376"
 
-SYMBOLS = ['ZBTUSDT', 'ZAMAUSDT', 'WBETHUSDT', 'ETHUSDT', 'LAUSDT','ACXUSDT', 'BTCUSDT', 'MEMEUSDT', 'SOLVUSDT']
+SYMBOLS = ['ZBTUSDT', 'ZAMAUSDT', 'WBETHUSDT', 'ETHUSDT', 'LAUSDT', 'ACXUSDT', 'BTCUSDT', 'MEMEUSDT', 'SOLVUSDT']
 
 CAPITAL_PER_SYMBOL = 100.0   # رأس المال لكل عملة بالدولار
-TIMEFRAME          = "1h"     # الإطار الزمني
-COMMISSION         = 0.001  # 0.075% عمولة بينانس
-TP_RATIO           = 1.0      # نسبة الربح للمخاطرة 1:1
-PERIOD             = 2        # فترة الفراكتال
+TIMEFRAME          = "1h"    # الإطار الزمني
+COMMISSION         = 0.001   # 0.1% عمولة بينانس
+TP_FIXED_PCT       = 0.012   # TP ثابت 1.2% دائماً
+PERIOD             = 2       # فترة الفراكتال
 
 # فلاتر الاختراق الكاذب
 VOLUME_MULTIPLIER  = 1.5
@@ -109,7 +108,7 @@ class TelegramBot:
                 except Exception as e:
                     log.error(f"Telegram send failed: {e}")
                 finally:
-                    await asyncio.sleep(0.4)  # تجنب حد الرسائل
+                    await asyncio.sleep(0.4)
                     self._queue.task_done()
 
     def start(self, loop):
@@ -119,8 +118,8 @@ class TelegramBot:
 #  Message Templates
 # ══════════════════════════════════════════════════════════════
 def msg_open_trade(symbol, entry, sl, tp, equity, risk_usd):
-    #es=oco(symbol,tp,sl)
-    es=None
+    es = None
+    current_bot_ip = "غير متاح"
     try:
         import requests
         current_bot_ip = requests.get('https://api.ipify.org', timeout=10).text
@@ -132,13 +131,14 @@ def msg_open_trade(symbol, entry, sl, tp, equity, risk_usd):
     try:
         es = oco(symbol, tp, sl)
         oco_status = "OK"
-        oco_entry = es
-        oco_error = ""
+        oco_entry  = es
+        oco_error  = ""
     except Exception as e:
         oco_status = "FAILED"
-        oco_entry = ""
-        oco_error = str(e)
+        oco_entry  = ""
+        oco_error  = str(e)
     risk_pct = abs(entry - sl) / entry * 100
+    tp_pct   = TP_FIXED_PCT * 100
     return (
         f"🧠 OCO: {oco_status}\n"
         f"💰 Entry: {oco_entry}\n"
@@ -146,11 +146,10 @@ def msg_open_trade(symbol, entry, sl, tp, equity, risk_usd):
         f"IP: {current_bot_ip}\n"
         f"🟢 <b>صفقة جديدة مفتوحة</b>\n"
         f"{'─'*20}\n"
-       
         f"📌 العملة:      <b>{symbol}</b>\n"
         f"Entery: <code>{entry:.4f}</code>\n"
         f"🛑SL: <code>{sl:.4f}</code>  (-{risk_pct:.2f}%)\n"
-        f"🎯TP:  <code>{tp:.4f}</code>  (+{risk_pct*TP_RATIO:.2f}%)\n"
+        f"🎯TP:  <code>{tp:.4f}</code>  (+{tp_pct:.2f}%)\n"
         f"💰 رأس المال:   <code>${equity:,.2f}</code>\n"
         f"⚠️ مخاطرة:     <code>${risk_usd:.2f}</code>\n"
         f"🕐 {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -216,6 +215,36 @@ def msg_daily_stats(records):
         f"🏁 <b>المجموع:</b> {total_trades} صفقة  |  WR {overall_wr:.1f}%  |  "
         f"{'+'if total_pnl>=0 else ''}{total_pnl:.2f}$"
     )
+    return "\n".join(lines)
+
+def msg_historical_report(records):
+    """تقرير ما بعد تحميل البيانات التاريخية"""
+    lines = [f"📋 <b>تقرير البيانات التاريخية – {datetime.now().strftime('%Y-%m-%d %H:%M')}</b>\n{'═'*28}"]
+    total_trades = total_wins = total_losses = 0
+    total_pnl = 0.0
+    for r in records:
+        sym    = r['symbol']
+        trades = r['wins'] + r['losses']
+        wr     = r['wins'] / trades * 100 if trades else 0
+        pnl    = r['equity'] - CAPITAL_PER_SYMBOL
+        emoji  = "🟢" if pnl >= 0 else "🔴"
+        dd_str = f"  |  DD {r['max_dd']:.1f}%" if r['max_dd'] > 0 else ""
+        lines.append(
+            f"{emoji} <b>{sym}</b>:  {trades} صفقة  |  WR {wr:.0f}%  |  "
+            f"{'+'if pnl>=0 else ''}{pnl:.2f}${dd_str}"
+        )
+        total_trades += trades
+        total_wins   += r['wins']
+        total_losses += r['losses']
+        total_pnl    += pnl
+    overall_wr = total_wins / total_trades * 100 if total_trades else 0
+    lines.append(f"{'─'*28}")
+    lines.append(
+        f"🏁 <b>المجموع:</b> {total_trades} صفقة  |  WR {overall_wr:.1f}%  |  "
+        f"{'+'if total_pnl>=0 else ''}{total_pnl:.2f}$"
+    )
+    lines.append(f"{'─'*28}")
+    lines.append(f"🎯 TP الثابت: {TP_FIXED_PCT*100:.1f}%  |  رأس المال لكل عملة: ${CAPITAL_PER_SYMBOL:.0f}")
     return "\n".join(lines)
 
 # ══════════════════════════════════════════════════════════════
@@ -416,8 +445,9 @@ class SymbolEngine:
                         self.levels.remove_broken_resistances(c['close'])
                         return
 
-                    tp_price     = c['close'] + risk * TP_RATIO
-                    self.entry_price = c['close']* (1 + 0.012)
+                    # TP ثابت 1.2% من سعر الدخول
+                    tp_price         = c['close'] * (1 + TP_FIXED_PCT)
+                    self.entry_price = c['close']
                     self.sl          = sl_price
                     self.tp          = tp_price
                     self.in_trade    = True
@@ -530,7 +560,9 @@ async def main():
 
     tg = TelegramBot(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
     tg.start(loop)
-    # --- كود استخراج الـ IP الخاص بالبوت ---
+
+    # استخراج الـ IP
+    current_bot_ip = "غير متاح"
     try:
         import requests
         current_bot_ip = requests.get('https://api.ipify.org', timeout=10).text
@@ -539,16 +571,15 @@ async def main():
         print("="*40 + "\n")
     except Exception as e:
         print(f"❌ فشل استخراج الـ IP بسبب: {e}")
-# -------------------------------------
 
     await tg.send(
         f"🤖 <b>بوت الفراكتال يعمل الآن</b>\n"
-        f"🤖 عنوان الـ IP الحالي للبوت هو: {current_bot_ip}</b>\n"
+        f"🤖 عنوان الـ IP الحالي للبوت هو: {current_bot_ip}\n"
         f"{'─'*28}\n"
         f"📈 العملات: {', '.join(SYMBOLS)}\n"
         f"⏱ الإطار الزمني: {TIMEFRAME}\n"
         f"💰 رأس المال لكل عملة: ${CAPITAL_PER_SYMBOL:,.0f}\n"
-        f"🎯 نسبة TP:SL = 1:{TP_RATIO}\n"
+        f"🎯 TP ثابت: {TP_FIXED_PCT*100:.1f}%\n"
         f"🛡 فلاتر الاختراق الكاذب: مفعّلة\n"
         f"{'─'*28}\n"
         f"🕐 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
@@ -567,9 +598,15 @@ async def main():
                 for c in candles:
                     await engine.process(c)
                 log.info(f"  ✅ {sym}: تم تحميل {len(candles)} شمعة")
-                await asyncio.sleep(0.3)  # تجنب حد الطلبات
+                await asyncio.sleep(0.3)
             except Exception as e:
                 log.error(f"  ❌ {sym}: خطأ في تحميل البيانات – {e}")
+
+    # ── تقرير فوري بعد تحميل البيانات التاريخية ──────────
+    records = [e.stats() for e in engines.values()]
+    await tg.send(msg_historical_report(records))
+    log.info("📋 تم إرسال تقرير البيانات التاريخية")
+    # ──────────────────────────────────────────────────────
 
     await tg.send(f"✅ <b>تم تحميل البيانات التاريخية</b>\nجاهز لاستقبال الشموع اللايف...")
 
@@ -589,7 +626,7 @@ async def main():
                         if msg.type == aiohttp.WSMsgType.TEXT:
                             data = json.loads(msg.data)
                             k    = parse_kline(data)
-                            if k['closed']:  # معالجة الشمعة المكتملة فقط
+                            if k['closed']:
                                 sym = k['symbol']
                                 if sym in engines:
                                     await engines[sym].process(k)
@@ -602,8 +639,8 @@ async def main():
 
 
 # ==========================================
-# 4. نقطة الانطلاق (دمج الويب مع البوت)
+# 4. نقطة الانطلاق
 # ==========================================
 if __name__ == "__main__":
-    keep_alive()          # تشغيل خادم إبقاء السيرفر مستيقظاً أولاً
-    asyncio.run(main())   # تشغيل بوت التداول ثانياً في المسار الرئيسي
+    keep_alive()
+    asyncio.run(main())
