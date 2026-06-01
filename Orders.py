@@ -1,12 +1,13 @@
 from binance.client import Client
 from decimal import Decimal, ROUND_DOWN
 import time
+import os
 #================================
                         #Set Api
 #================================
 
-api_key = "BpMLmKWUbVJ5V4ktmvNCBFq2TEHNxiKigjO7AZ8UaLpLMhMWujRNNJgdHt6YyeLV"
-api_secret = "0XJ8dxCaqvQ2Re0MQwXHCe0n2GZfG4Go9pW5sERjjg3zNkAFsUZU0sMGHRBC5u4f"
+api_key    = os.environ.get("BINANCE_API_KEY")
+api_secret = os.environ.get("BINANCE_API_SECRET")
 client = Client(api_key, api_secret)
 global price_global
 price_global=0
